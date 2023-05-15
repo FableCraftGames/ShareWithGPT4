@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breakout Game</title>
+    <style>
+        @keyframes fadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.5); }
+        }
+
+        
+        
+        #gameArea {
+            position: relative;
+            width: 640px;
+            height: 480px;
+            border: 1px solid #000;
+            background: linear-gradient(to bottom, #003E3E 0%, #001919 100%);
+            border-radius: 20px;
+            border-top: 4px solid #ADD8E6;
+            border-left: 4px solid #ADD8E6;
+            border-right: 4px solid #ADD8E6;
+        }
+
+
+
+
+        #paddle {
+            position: absolute;
+            bottom: 10px;
+            width: 100px;
+            height: 10px;
+            background-color: #000;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(to bottom right, #008080 0%, #20B2AA 50%, #008080 100%);
+        }
+
+        #ball {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #000;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(to bottom right, #aaa 0%, #eee 50%, #aaa 100%);
+        }
+
+        .brick {
+            position: absolute;
+            width: 50px;
+            height: 20px;
+            background-color: red; /* Use different colors for different rows */
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(to bottom right, #aaa 0%, #eee 50%, #aaa 100%);
+        }
+
+        .brick.hit {
+            animation: fadeOut 0.5s linear forwards;
+        }
+
+
+
+        .brick-red {
+            background: linear-gradient(to bottom right, #ff0000 0%, #ff8080 50%, #ff0000 100%);
+        }
+
+        .brick-yellow {
+            background: linear-gradient(to bottom right, #ffff00 0%, #ffff80 50%, #ffff00 100%);
+        }
+
+        .brick-orange {
+            background: linear-gradient(to bottom right, #ffa500 0%, #ffbf80 50%, #ffa500 100%);
+        }
+
+        .brick-green {
+            background: linear-gradient(to bottom right, #008000 0%, #80c080 50%, #008000 100%);
+        }
+
+        .brick-blue {
+            background: linear-gradient(to bottom right, #0000ff 0%, #8080ff 50%, #0000ff 100%);
+        }
+
+        .brick-purple {
+            background: linear-gradient(to bottom right, #800080 0%, #bf80bf 50%, #800080 100%);
+        }
+
+        body {
+            background-color: #282828;
+        }
+
+
+        @keyframes shake {
+            10%, 90% {
+                transform: translate3d(-1px, 0, 0);
+            }
+
+            20%, 80% {
+                transform: translate3d(2px, 0, 0);
+            }
+
+            30%, 50%, 70% {
+                transform: translate3d(-4px, 0, 0);
+            }
+
+            40%, 60% {
+                transform: translate3d(4px, 0, 0);
+            }
+        }
+
+        #gameArea.shake {
+            animation: shake 0.5s;
+        }
+
+        #gameArea::before {
+            content: '';
+            display: none;
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background-color: rgba(255, 0, 0, 0.2);
+        }
+
+        #gameArea.red-overlay::before {
+            display: block;
+        }
+
+        @keyframes reverseShake {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(0px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(2px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        #ball.shaking {
+            animation: reverseShake 0.05s;
+            animation-iteration-count: 40;
+        }
+
+        .disclaimer {
+            color: white;
+            background-color: darkgray;
+            text-align: center;
+            padding: 10px;
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        #scoreboard {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            color: #ADD8E6;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px #000000;
+        }
+
+        #score-display, #lives-display {
+            margin-bottom: 10px;
+        }
+
+
+    </style>
+</head>
+<body>
+<div id="gameArea">
+    <audio id="paddleHitSound" src="paddle_hit.mp3"></audio>
+    <audio id="brickHitSound" src="brick_hit.mp3"></audio>
+    <audio id="ballLostSound" src="ball_lost.mp3"></audio>
+    <audio id="gameWonSound" src="game_won.mp3"></audio>
+    <audio id="backgroundMusic" src="your_music_file.mp3" loop></audio>
+
+    <div id="paddle"></div>
+    <div id="ball"></div>
+    <div id="bricks">
+        <!-- Generate bricks dynamically using JavaScript -->
+    </div>
+</div>
+<div id="scoreboard">
+    <div id="score-display">Score: 0</div>
+    <div id="lives-display">Lives: 3</div>
+</div>
+
+<script>
+    let isGameRunning = true;
+    const paddleHitSound = document.getElementById('paddleHitSound');
+    const brickHitSound = document.getElementById('brickHitSound');
+    const ballLostSound = document.getElementById('ballLostSound');
+    const gameWonSound = document.getElementById('gameWonSound');
+
+    const backgroundMusic = document.getElementById('backgroundMusic');
+    backgroundMusic.volume = 0.5;
+    backgroundMusic.play();
+
+
+    const brickColors = ['#FF0000', '#FFFF00', '#FFA500', '#008000', '#0000FF', '#800080'];
+    const numRows = 6;
+    const numCols = 10;
+    const brickWidth = 50;
+    const brickHeight = 20;
+
+    const brickClasses = ['brick-red', 'brick-yellow', 'brick-orange', 'brick-green', 'brick-blue', 'brick-purple'];
+    let ballActive = true;
+
+
+
+    // Calculate initial ball position
+    const gameArea = document.getElementById('gameArea');
+    function createBricks() {
+        const brickSpacing = 2; // Space between bricks
+        const totalBrickWidth = numCols * (brickWidth + brickSpacing);
+        const bricksAreaLeft = (gameArea.clientWidth - totalBrickWidth) / 2;
+
+        for (let row = 0; row < numRows; row++) {
+            for (let col = 0; col < numCols; col++) {
+                const brick = document.createElement('div');
+                brick.classList.add('brick');
+                brick.style.backgroundColor = brickColors[row];
+                brick.style.left = `${bricksAreaLeft + col * (brickWidth + brickSpacing)}px`;
+                brick.style.top = `${row * (brickHeight + brickSpacing)}px`;
+                brick.classList.add(brickClasses[row]);
+                document.getElementById('bricks').appendChild(brick);
+            }
+        }
+    }
+
+
+    createBricks();
+
+    const paddle = document.getElementById('paddle');
+    const paddleSpeed = 5;
+    let hasInteracted = false;
+    document.addEventListener('keydown', (event) => {
+
+        if (!hasInteracted) {
+        backgroundMusic.play();
+        hasInteracted = true;
+    }
+        
+        const key = event.key;
+    const paddleLeft = parseInt(paddle.style.left) || 0;
+
+    if (key === 'ArrowLeft' && paddleLeft > 0) {
+        paddle.style.left = `${paddleLeft - paddleSpeed}px`;
+    } else if (key === 'ArrowRight' && paddleLeft < (gameArea.clientWidth - paddle.clientWidth)) {
+        paddle.style.left = `${paddleLeft + paddleSpeed}px`;
+    }
+    });
+
+    
+    const ball = document.getElementById('ball');
+
+
+    
+    const initialBallX = gameArea.clientWidth / 2 - ball.clientWidth / 2;
+    const initialBallY = gameArea.clientHeight - paddle.clientHeight - ball.clientHeight - 20; // 20px above the paddle
+
+
+
+    // Set initial ball position
+    ball.style.left = `${initialBallX}px`;
+    ball.style.top = `${initialBallY}px`;
+    
+    // Update ballX and ballY
+    let ballX = initialBallX;
+    let ballY = initialBallY;
+    let ballSpeedX = 2;
+    let ballSpeedY = -2;
+
+    function moveBall() {
+        if (ballActive) {
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+            ball.style.left = `${ballX}px`;
+            ball.style.top = `${ballY}px`;
+        }
+    }
+
+
+    let collisionOccurred = false;
+    const collisionPadding = 3; // 3 pixel padding around the paddle
+
+    function ballPaddleCollision() {
+        const paddleRect = paddle.getBoundingClientRect();
+        const ballRect = ball.getBoundingClientRect();
+        const paddleWidth = paddle.clientWidth;
+        const paddleCenter = paddleRect.left + paddleWidth / 2;
+
+        // Expand the paddle's hitbox by collisionPadding pixels on each side
+        const expandedPaddleRect = {
+            left: paddleRect.left - collisionPadding,
+            right: paddleRect.right + collisionPadding,
+            top: paddleRect.top - collisionPadding,
+            bottom: paddleRect.bottom + collisionPadding,
+        };
+
+        if (
+            ballRect.right > expandedPaddleRect.left &&
+            ballRect.left < expandedPaddleRect.right &&
+            ballRect.bottom >= expandedPaddleRect.top &&
+            ballRect.bottom <= expandedPaddleRect.bottom
+        ) {
+            if (!collisionOccurred) {
+                paddleHitSound.play();
+                ballSpeedY = -Math.abs(ballSpeedY); // Ensure the ball bounces upwards
+
+                // Calculate the ball's position relative to the paddle's center
+                const relativeBallPosition = ballRect.left + ballRect.width / 2 - paddleCenter;
+
+                // Change the ball's horizontal speed based on its position relative to the paddle's center
+                ballSpeedX = 5 * relativeBallPosition / (paddleWidth / 2);
+
+                // Limit the ball's speed to prevent it from going too fast
+                ballSpeedX = Math.max(Math.min(ballSpeedX, 5), -5);
+
+                // Set the ball's position to be right above the expanded paddle's top to avoid overlap
+                ballY = expandedPaddleRect.top - ballRect.height;
+                ball.style.top = `${ballY}px`;
+
+                collisionOccurred = true;
+            }
+        } else {
+            collisionOccurred = false;
+        }
+    }
+
+
+
+
+
+
+
+
+    function ballBrickCollision() {
+        const bricks = document.getElementsByClassName('brick');
+        const ballRect = ball.getBoundingClientRect();
+        for (let i = 0; i < bricks.length; i++) {
+            const brick = bricks[i];
+            const brickRect = brick.getBoundingClientRect();
+            if (
+                ballRect.right > brickRect.left &&
+                ballRect.left < brickRect.right &&
+                ballRect.bottom > brickRect.top &&
+                ballRect.top < brickRect.bottom
+            ) {
+                brickHitSound.play();
+                // Determine if the collision happened from the top/bottom or the sides
+                const prevBallBottom = ballY + ballSpeedY + ball.clientHeight;
+                const prevBallTop = ballY + ballSpeedY;
+                const prevBallLeft = ballX + ballSpeedX;
+                const prevBallRight = ballX + ballSpeedX + ball.clientWidth;
+
+                const collidedFromTop = prevBallBottom <= brickRect.top;
+                const collidedFromBottom = prevBallTop >= brickRect.bottom;
+                const collidedFromLeft = prevBallRight <= brickRect.left;
+                const collidedFromRight = prevBallLeft >= brickRect.right;
+
+                if (collidedFromTop || collidedFromBottom) {
+                    ballSpeedY = -ballSpeedY;
+                }
+
+                if (collidedFromLeft || collidedFromRight) {
+                    ballSpeedX = -ballSpeedX;
+                }
+
+                brick.classList.add('hit');
+                setTimeout(function() {
+                    if (brick.parentNode) {
+                        brick.parentNode.removeChild(brick);
+                    }
+                }, 500); // Remove the brick after 500ms
+                updateScore(); // Update the score when a brick is hit
+                break;
+            }
+        }
+    }
+
+
+
+
+
+    function ballWallCollision() {
+        if (ballX <= 0 || ballX + ball.clientWidth >= gameArea.clientWidth) {
+            paddleHitSound.play();
+            ballSpeedX = -ballSpeedX;
+        }
+        if (ballY <= 0) {
+            ballSpeedY = -ballSpeedY;
+        }
+    }
+
+
+    let score = 0;
+    let lives = 3;
+
+    function updateScore() {
+        score++;
+        document.getElementById('score-display').innerText = `Score: ${score}`;
+    }
+
+    
+
+    let gameWon = false;
+
+    function updateLives(change = 0) {
+        lives += change;
+        document.getElementById('lives-display').innerText = `Lives: ${lives}`;
+
+        // If all lives are lost, stop the game.
+        if (lives <= 0) {
+            ballActive = false; // Stop moving the ball.
+            isGameRunning = false; // Stop the game.
+            gameArea.classList.add('red-overlay'); // Add a red overlay to indicate game over.
+            setTimeout(() => {
+                alert('Game Over!'); // Alert the player that the game is over.
+        }, 100); // Delay the alert by a short time so that the red overlay appears first.
+        }
+    }
+
+    // Call the function at the start to initialize the display.
+    updateLives(0);
+
+
+
+
+    function resetBallPosition() {
+        ballLostSound.play();
+        
+        ballActive = false;
+        gameArea.classList.add('shake', 'red-overlay');
+        setTimeout(() => {
+            
+            gameArea.classList.remove('shake', 'red-overlay');
+        ballX = initialBallX;
+        ballY = initialBallY;
+        ball.style.left = `${ballX}px`;
+        ball.style.top = `${ballY}px`;
+        ballSpeedY = -Math.abs(ballSpeedY);
+        ballSpeedX = Math.random() > 0.5 ? 2 : -2;
+        setTimeout(() => {
+            if (!gameWon) {
+            
+            ballActive = true; // Only reactivate the ball if the game has not been won
+        }
+    }, 2000); // Delay the ball activation for half a second to avoid shaking effect
+    }, 2000);
+    }
+
+    function handleGameOver() {
+        const remainingBricks = document.getElementsByClassName('brick').length;
+
+        if (ballY + ball.clientHeight >= gameArea.clientHeight) {
+            resetBallPosition();
+            
+        } else if (remainingBricks === 0) {
+            gameWon = true; // Set gameWon to true when the game is won
+            gameWonSound.play();
+            ballActive = false;
+            gameWonSound.onended = function() {
+                alert('You won!');
+                createBricks();
+                resetBallPosition();
+                resetPaddlePosition();
+                gameWon = false; // Start a new game
+                ballActive = true; // Reactivate the ball after the sound has finished playing
+                
+            };
+        }
+    }
+
+
+    function resetPaddlePosition() {
+        const initialPaddleLeft = (gameArea.clientWidth - paddle.clientWidth) / 2;
+        paddle.style.left = `${initialPaddleLeft}px`;
+    }
+
+
+    function ballLost() {
+        if (ballY + ball.clientHeight >= gameArea.clientHeight) {
+            ballLostSound.play();
+            ballActive = false; // Stop moving the ball.
+            ballY = initialBallY; // Reset the ball's position.
+            ballX = initialBallX;
+            ball.style.top = `${ballY}px`;
+            ball.style.left = `${ballX}px`;
+
+            // Update lives count.
+            updateLives(-1);
+        }
+    }
+
+
+    function gameLoop() {
+        if (isGameRunning) {
+            moveBall();
+            ballPaddleCollision();
+            ballBrickCollision();
+            ballWallCollision();
+            ballLost();
+            requestAnimationFrame(gameLoop);
+        }
+    }
+
+    gameLoop();
+
+
+
+
+
+</script>
+<div class="disclaimer">
+    <p>Sound effects obtained from <a href="https://www.zapsplat.com" target="_blank">www.zapsplat.com</a></p>
+</div>
+</body>
+</html>
